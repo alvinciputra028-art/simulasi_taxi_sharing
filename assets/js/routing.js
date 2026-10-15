@@ -11,8 +11,9 @@ import { updateTampilanEstimasi, updateStatus } from './ui.js';
 /**
  * Mengambil rute perjalanan terbaik dari OSRM berdasarkan daftar waypoints.
  * @param {Array<[number, number]>} waypoints - Array koordinat [lat, lng]
+ * @param {boolean} isInitialRoute - Apakah ini rute awal (true) atau kalkulasi ulang/detour (false)
  */
-export async function dapatkanRuteOSRM(waypoints) {
+export async function dapatkanRuteOSRM(waypoints, isInitialRoute = true) {
     try {
         // Format OSRM: lng,lat;lng,lat
         const coordsString = waypoints.map(wp => `${wp[1]},${wp[0]}`).join(';');
@@ -38,9 +39,9 @@ export async function dapatkanRuteOSRM(waypoints) {
             opacity: 0.7
         }).addTo(map);
 
-        // Hanya fitBounds pada awal penetapan titik rute
-        if (state.currentTravelDistance === 0) {
-            map.fitBounds(state.routePolyline.getBounds());
+        // Hanya fitBounds pada awal penetapan titik rute agar kamera tidak meloncat kaget saat reroute
+        if (isInitialRoute) {
+            map.fitBounds(state.routePolyline.getBounds(), { padding: [40, 40] });
         }
 
         state.routeGeoJSON = turf.lineString(coords);

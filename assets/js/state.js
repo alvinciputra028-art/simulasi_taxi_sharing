@@ -13,6 +13,8 @@ export const state = {
     taxiMarker: null,
     taxiRadiusCircle: null,
     routePolyline: null,
+    traveledPolyline: null,
+    traveledCoords: [],
 
     // Rute & Jarak
     routeGeoJSON: null,

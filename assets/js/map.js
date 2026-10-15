@@ -42,4 +42,9 @@ export function clearVehicleLayers() {
         map.removeLayer(state.taxiRadiusCircle);
         state.taxiRadiusCircle = null;
     }
+    if (state.traveledPolyline) {
+        map.removeLayer(state.traveledPolyline);
+        state.traveledPolyline = null;
+    }
+    state.traveledCoords = [];
 }
