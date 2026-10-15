@@ -59,8 +59,8 @@ export function mulaiSimulasi() {
     }
     state.traveledCoords = [startLatLng];
 
-    state.lastTimestamp = performance.now();
-    requestAnimationFrame(animasiPerjalanan);
+    state.lastTimestamp = null;
+    state.animationFrameId = requestAnimationFrame(animasiPerjalanan);
 }
 
 /**
@@ -69,49 +69,61 @@ export function mulaiSimulasi() {
 export function animasiPerjalanan(timestamp) {
     if (!state.isAnimating) return;
 
-    const dt = timestamp - state.lastTimestamp;
-    state.lastTimestamp = timestamp;
-
-    const speedKmh = parseFloat(dom.inputSpeed.value) || 60;
-    const speedMs = (speedKmh * 1000 / 3600) * simulationMultiplier;
-
-    state.currentTravelDistance += speedMs * (dt / 1000);
-
-    if (state.currentTravelDistance >= state.totalRouteDistance) {
-        state.currentTravelDistance = state.totalRouteDistance;
-        state.isAnimating = false;
-    }
-
-    const currentPoint = turf.along(state.routeGeoJSON, state.currentTravelDistance, { units: 'meters' });
-    const currentLng = currentPoint.geometry.coordinates[0];
-    const currentLat = currentPoint.geometry.coordinates[1];
-    const currentLatLng = [currentLat, currentLng];
-
-    state.taxiMarker.setLatLng(currentLatLng);
-    state.taxiRadiusCircle.setLatLng(currentLatLng);
-
-    // Perbarui garis jejak rute yang sudah dilalui (warna abu-abu putus-putus)
-    const lastCoord = state.traveledCoords[state.traveledCoords.length - 1];
-    if (!lastCoord || map.distance(lastCoord, currentLatLng) > 15) {
-        state.traveledCoords.push(currentLatLng);
-        if (!state.traveledPolyline) {
-            state.traveledPolyline = L.polyline(state.traveledCoords, {
-                color: '#7f8c8d',
-                weight: 4,
-                dashArray: '6, 6',
-                opacity: 0.75
-            }).addTo(map);
-        } else {
-            state.traveledPolyline.setLatLngs(state.traveledCoords);
+    try {
+        // Inisialisasi timestamp frame pertama agar dt tidak pernah negatif
+        if (!state.lastTimestamp) {
+            state.lastTimestamp = timestamp;
         }
+
+        const dt = Math.max(0, timestamp - state.lastTimestamp);
+        state.lastTimestamp = timestamp;
+
+        const speedKmh = parseFloat(dom.inputSpeed.value) || 60;
+        const speedMs = (speedKmh * 1000 / 3600) * simulationMultiplier;
+
+        state.currentTravelDistance += speedMs * (dt / 1000);
+
+        if (state.currentTravelDistance >= state.totalRouteDistance) {
+            state.currentTravelDistance = state.totalRouteDistance;
+            state.isAnimating = false;
+        }
+
+        // Pastikan jarak aman antara 0 dan total jarak rute agar turf.along tidak pernah error
+        const safeDist = Math.max(0, Math.min(state.currentTravelDistance, state.totalRouteDistance));
+        const currentPoint = turf.along(state.routeGeoJSON, safeDist, { units: 'meters' });
+        const currentLng = currentPoint.geometry.coordinates[0];
+        const currentLat = currentPoint.geometry.coordinates[1];
+        const currentLatLng = [currentLat, currentLng];
+
+        state.taxiMarker.setLatLng(currentLatLng);
+        state.taxiRadiusCircle.setLatLng(currentLatLng);
+
+        // Perbarui garis jejak rute yang sudah dilalui (warna abu-abu putus-putus)
+        const lastCoord = state.traveledCoords[state.traveledCoords.length - 1];
+        if (!lastCoord || L.latLng(lastCoord).distanceTo(currentLatLng) > 15) {
+            state.traveledCoords.push(currentLatLng);
+            if (!state.traveledPolyline) {
+                state.traveledPolyline = L.polyline(state.traveledCoords, {
+                    color: '#7f8c8d',
+                    weight: 4,
+                    dashArray: '6, 6',
+                    opacity: 0.75
+                }).addTo(map);
+            } else {
+                state.traveledPolyline.setLatLngs(state.traveledCoords);
+            }
+        }
+
+        const currentRadius = parseFloat(dom.inputRadius.value) || 1500;
+        state.taxiRadiusCircle.setRadius(currentRadius);
+
+        evaluasiPenumpang(currentLng, currentLat, currentRadius);
+        cobaMunculkanPesanan();
+        updateTampilanEstimasi();
+
+    } catch (err) {
+        console.error("Simulation animation error:", err);
     }
-
-    const currentRadius = parseFloat(dom.inputRadius.value) || 1500;
-    state.taxiRadiusCircle.setRadius(currentRadius);
-
-    evaluasiPenumpang(currentLng, currentLat, currentRadius);
-    cobaMunculkanPesanan();
-    updateTampilanEstimasi();
 
     if (state.isAnimating) {
         state.animationFrameId = requestAnimationFrame(animasiPerjalanan);
@@ -136,20 +148,20 @@ export function evaluasiPenumpang(taxiLng, taxiLat, radiusMeter) {
         const personPt = turf.point(p.coords);
         const jarak = turf.distance(taxiPt, personPt, { units: 'meters' });
 
-        // Logika jika taxi telah sampai di titik jemput penumpang (Detour Complete)
-        if (p.state === 'ACCEPTED' && jarak <= 50) {
+        // 1. Logika jika taxi telah sampai di titik jemput penumpang (toleransi 100 meter)
+        if (p.state === 'ACCEPTED' && jarak <= 100) {
             p.state = 'ONBOARD';
             p.marker.setOpacity(0); // Sembunyikan dari peta karena sudah di dalam taxi
             updateStatus(`${p.name} berhasil dijemput!`);
             // Hapus dari daftar jemput yang belum dikunjungi
             state.unvisitedPickups = state.unvisitedPickups.filter(
-                wp => wp[0] !== p.coords[1] && wp[1] !== p.coords[0]
+                wp => Math.hypot(wp[0] - p.coords[1], wp[1] - p.coords[0]) > 0.0002
             );
             return;
         }
 
-        // Cek jika taxi sudah melaju melewati posisi proyeksi penumpang pada rute
-        if (p.routeDist !== undefined && state.currentTravelDistance > p.routeDist + 100) {
+        // 2. Cek jika taxi sudah melaju melewati posisi proyeksi penumpang (hanya yang belum di-accept)
+        if (p.state !== 'ACCEPTED' && p.routeDist !== undefined && state.currentTravelDistance > p.routeDist + 100) {
             p.state = 'PASSED';
             p.marker.setIcon(icons.red);
 
@@ -217,6 +229,11 @@ export async function terimaPesanan() {
 
     // Jeda simulasi sementara dengan pesan status yang jelas
     state.isAnimating = false;
+    if (state.animationFrameId) {
+        cancelAnimationFrame(state.animationFrameId);
+        state.animationFrameId = null;
+    }
+
     passenger.state = 'ACCEPTED';
     passenger.marker.setIcon(icons.purple);
     updateStatus(`🔄 Menghitung rute memutar ke ${passenger.name}...`);
@@ -245,15 +262,15 @@ export async function terimaPesanan() {
 
         // 4. Lanjutkan perjalanan dari titik awal rute baru secara mulus
         state.currentTravelDistance = 0;
-        state.lastTimestamp = performance.now();
+        state.lastTimestamp = null;
         state.isAnimating = true;
-        requestAnimationFrame(animasiPerjalanan);
+        state.animationFrameId = requestAnimationFrame(animasiPerjalanan);
     } else {
         updateStatus("Gagal menghitung rute memutar. Melanjutkan perjalanan awal...");
         sembunyikanPesanan();
-        state.lastTimestamp = performance.now();
+        state.lastTimestamp = null;
         state.isAnimating = true;
-        requestAnimationFrame(animasiPerjalanan);
+        state.animationFrameId = requestAnimationFrame(animasiPerjalanan);
     }
 
     dom.btnAccept.disabled = false;

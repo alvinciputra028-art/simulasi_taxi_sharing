@@ -45,7 +45,8 @@ export async function dapatkanRuteOSRM(waypoints, isInitialRoute = true) {
         }
 
         state.routeGeoJSON = turf.lineString(coords);
-        state.totalRouteDistance = routeData.distance;
+        // Hitung total jarak rute menggunakan Turf agar selaras presisi dengan turf.along
+        state.totalRouteDistance = turf.length(state.routeGeoJSON, { units: 'meters' });
 
         updateTampilanEstimasi();
         return true;
