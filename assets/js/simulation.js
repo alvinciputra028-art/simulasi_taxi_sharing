@@ -8,7 +8,7 @@ import { state } from './state.js';
 import { map } from './map.js';
 import { icons, supadioLatLng, maxPassengersCount, simulationMultiplier } from './config.js';
 import { dom, updateStatus, updateTampilanEstimasi, updatePassengerCountDisplay, tampilkanPesanan, sembunyikanPesanan } from './ui.js';
-import { resetStatusPenumpang } from './passenger.js';
+import { resetStatusPenumpang, updatePassengersRouteDist } from './passenger.js';
 import { dapatkanRuteOSRM } from './routing.js';
 
 /**
@@ -107,7 +107,7 @@ export function evaluasiPenumpang(taxiLng, taxiLat, radiusMeter) {
     const taxiPt = turf.point([taxiLng, taxiLat]);
 
     state.passengers.forEach(p => {
-        if (p.state === 'OUT_OF_REACH' || p.state === 'ONBOARD') return;
+        if (p.state === 'OUT_OF_REACH' || p.state === 'ONBOARD' || p.state === 'PASSED') return;
 
         const personPt = turf.point(p.coords);
         const jarak = turf.distance(taxiPt, personPt, { units: 'meters' });
@@ -124,8 +124,21 @@ export function evaluasiPenumpang(taxiLng, taxiLat, radiusMeter) {
             return;
         }
 
+        // Cek jika taxi sudah melaju melewati posisi proyeksi penumpang pada rute
+        if (p.routeDist !== undefined && state.currentTravelDistance > p.routeDist + 100) {
+            p.state = 'PASSED';
+            p.marker.setIcon(icons.red);
+
+            if (state.activeRequestPassenger && state.activeRequestPassenger.id === p.id) {
+                sembunyikanPesanan();
+                updateStatus("Pesanan terlewat (Kadaluarsa).");
+            }
+            return;
+        }
+
         if (p.state === 'WAITING') {
-            if (jarak <= radiusMeter) {
+            // Hanya aktif menjadi IN_RADIUS jika berada dalam radius dan di depan/sejajar taxi
+            if (jarak <= radiusMeter && (p.routeDist === undefined || p.routeDist >= state.currentTravelDistance - 50)) {
                 p.state = 'IN_RADIUS';
                 p.marker.setIcon(icons.green);
             }
@@ -153,11 +166,12 @@ export function cobaMunculkanPesanan() {
         return;
     }
 
-    // Calon = Dalam Radius + Belum Pesan + Jumlah Rombongan Muat di Kursi Tersisa
+    // Calon = Sedang di dalam Radius Mobil (Hijau) + Belum Pesan + Muat Kursi + Posisi di DEPAN Taxi
     const kandidat = state.passengers.filter(p =>
-        (p.state === 'WAITING' || p.state === 'IN_RADIUS') &&
+        p.state === 'IN_RADIUS' &&
         !p.hasRequested &&
-        p.partySize <= sisaKapasitas
+        p.partySize <= sisaKapasitas &&
+        (p.routeDist === undefined || p.routeDist >= state.currentTravelDistance)
     );
 
     if (kandidat.length > 0) {
@@ -195,6 +209,7 @@ export async function terimaPesanan() {
         ];
 
         await dapatkanRuteOSRM(newWaypoints);
+        updatePassengersRouteDist();
 
         // 4. Lanjutkan perjalanan dari titik awal rute baru
         state.currentTravelDistance = 0;

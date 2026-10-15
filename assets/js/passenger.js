@@ -44,6 +44,9 @@ export function generatePenumpang(radiusAmbang = 1500) {
 
         // 3. Evaluasi apakah penumpang berada dalam radius rute
         const distToRoute = turf.pointToLineDistance(finalPt, state.routeGeoJSON, { units: 'meters' });
+        const snapped = turf.nearestPointOnLine(state.routeGeoJSON, finalPt, { units: 'meters' });
+        const routeDist = snapped.properties.location || 0; // Jarak posisi titik sepanjang rute (meter)
+
         const statusAwal = distToRoute <= radiusAmbang ? 'WAITING' : 'OUT_OF_REACH';
         const iconAwal = statusAwal === 'WAITING' ? icons.blue : icons.red;
 
@@ -61,10 +64,23 @@ export function generatePenumpang(radiusAmbang = 1500) {
             partySize: randParty,
             marker: marker,
             coords: [randLng, randLat],
+            routeDist: routeDist,
             state: statusAwal,
             hasRequested: false
         });
     }
+}
+
+/**
+ * Memperbarui jarak kumulatif proyeksi penumpang terhadap rute baru (misal setelah rute memutar).
+ */
+export function updatePassengersRouteDist() {
+    if (!state.routeGeoJSON || !state.passengers.length) return;
+    state.passengers.forEach(p => {
+        const pt = turf.point(p.coords);
+        const snapped = turf.nearestPointOnLine(state.routeGeoJSON, pt, { units: 'meters' });
+        p.routeDist = snapped.properties.location || 0;
+    });
 }
 
 /**
