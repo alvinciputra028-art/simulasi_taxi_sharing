@@ -16,6 +16,41 @@ document.addEventListener('DOMContentLoaded', () => {
     // 1. Inisialisasi Peta
     const map = initMap();
 
+    // Sinkronisasi nilai awal input jumlah penumpang
+    const initialPassCount = parseInt(dom.inputPassCount.value, 10) || 1;
+    state.currentPassengersCount = initialPassCount;
+    updatePassengerCountDisplay();
+
+    // Fungsi sinkronisasi jumlah penumpang pertama secara real-time
+    function syncPassengerCount() {
+        if (state.isAnimating) return;
+
+        let passInput = parseInt(dom.inputPassCount.value, 10);
+        if (isNaN(passInput)) return;
+
+        if (passInput > 4) passInput = 4;
+        if (passInput < 1) passInput = 1;
+        dom.inputPassCount.value = passInput;
+
+        state.currentPassengersCount = passInput;
+        updatePassengerCountDisplay();
+
+        // Jika Titik A sudah ada di peta, perbarui popup informasinya secara real-time
+        if (state.startMarker) {
+            state.startMarker.setPopupContent(`Titik A (${state.currentPassengersCount} Orang)`);
+        }
+    }
+
+    dom.inputPassCount.addEventListener('input', syncPassengerCount);
+    dom.inputPassCount.addEventListener('change', () => {
+        if (state.isAnimating) return;
+        let passInput = parseInt(dom.inputPassCount.value, 10) || 1;
+        if (passInput > 4) passInput = 4;
+        if (passInput < 1) passInput = 1;
+        dom.inputPassCount.value = passInput;
+        syncPassengerCount();
+    });
+
     // 2. Tombol: Tetapkan Titik Awal Penumpang (Titik A)
     dom.btnSetStart.addEventListener('click', () => {
         state.isSettingStart = true;
