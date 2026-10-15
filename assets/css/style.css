@@ -1,0 +1,146 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body, html {
+    height: 100%;
+    width: 100%;
+    background-color: #f4f6f8;
+    overflow: hidden;
+}
+
+.container {
+    display: flex;
+    height: 100vh;
+    width: 100vw;
+}
+
+/* Sidebar Kontrol */
+.sidebar {
+    width: 350px;
+    background-color: #ffffff;
+    box-shadow: 2px 0 15px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+}
+
+.sidebar-header {
+    background-color: #2980b9;
+    color: white;
+    padding: 20px;
+}
+
+.sidebar-header h2 {
+    font-size: 1.3rem;
+    margin-bottom: 5px;
+}
+
+.sidebar-header p {
+    font-size: 0.85rem;
+    color: #d6eaf8;
+}
+
+.control-group {
+    padding: 20px;
+    border-bottom: 1px solid #ecf0f1;
+}
+
+.control-group h3 {
+    font-size: 0.95rem;
+    color: #34495e;
+    margin-bottom: 15px;
+    text-transform: uppercase;
+}
+
+.input-group {
+    margin-bottom: 12px;
+}
+
+.input-group label {
+    display: block;
+    font-size: 0.85rem;
+    color: #7f8c8d;
+    margin-bottom: 5px;
+}
+
+.input-group input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #bdc3c7;
+    border-radius: 4px;
+    font-size: 0.95rem;
+}
+
+button {
+    width: 100%;
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+    font-size: 0.95rem;
+    font-weight: bold;
+    cursor: pointer;
+    margin-bottom: 10px;
+    transition: 0.2s;
+}
+
+.btn-primary {
+    background-color: #3498db;
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #2980b9;
+}
+
+.btn-success {
+    background-color: #2ecc71;
+    color: white;
+}
+
+.btn-success:hover {
+    background-color: #27ae60;
+}
+
+.btn-success:disabled {
+    background-color: #95a5a6;
+    cursor: not-allowed;
+}
+
+.btn-warning {
+    background-color: #f1c40f;
+    color: #2c3e50;
+}
+
+.btn-warning:hover {
+    background-color: #f39c12;
+}
+
+.btn-danger {
+    background-color: #e74c3c;
+    color: white;
+}
+
+.btn-danger:hover {
+    background-color: #c0392b;
+}
+
+/* Panel Informasi */
+.info-panel {
+    background-color: #f8f9f9;
+    padding: 15px;
+    border-radius: 5px;
+    border: 1px solid #dcdde1;
+    font-size: 0.9rem;
+    color: #2c3e50;
+    line-height: 1.6;
+}
+
+.info-panel span {
+    font-weight: bold;
+    color: #2980b9;
+}
