@@ -26,13 +26,15 @@ export function mulaiSimulasi() {
         state.unvisitedPickups = [];
         sembunyikanPesanan();
         updatePassengerCountDisplay();
-        updateAcceptedOrders();
     }
 
     if (!melanjutkan) {
         state.currentTravelDistance = 0;
         state.lastTimestamp = null;
         resetStatusPenumpang();
+        if (mulaiUlang) {
+            updateAcceptedOrders();
+        }
     }
 
     state.isAnimating = true;
