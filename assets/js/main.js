@@ -10,7 +10,7 @@ import { initMap, clearVehicleLayers } from './map.js';
 import { dom, updateStatus, updatePassengerCountDisplay, sembunyikanPesanan } from './ui.js';
 import { dapatkanRuteOSRM } from './routing.js';
 import { bersihkanPenumpang, generatePenumpang, updateRadiusPenumpang } from './passenger.js';
-import { mulaiSimulasi, terimaPesanan, tolakPesanan } from './simulation.js';
+import { mulaiSimulasi, jedaSimulasi, resetSimulasi, terimaPesanan, tolakPesanan } from './simulation.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     // 1. Inisialisasi Peta
@@ -91,6 +91,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (success) {
             dom.btnGenerate.disabled = false;
             dom.btnPlay.disabled = false;
+            dom.btnReset.disabled = false;
             updateStatus("Rute ditemukan. Siap simulasi.");
         }
     });
@@ -114,6 +115,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // 6. Tombol: Jalankan Simulasi
     dom.btnPlay.addEventListener('click', () => {
         mulaiSimulasi();
+    });
+
+    dom.btnPause.addEventListener('click', () => {
+        jedaSimulasi();
+    });
+
+    dom.btnReset.addEventListener('click', () => {
+        resetSimulasi();
+        map.getContainer().style.cursor = '';
     });
 
     // 7. Tombol Panel Pesanan: Terima dan Tolak

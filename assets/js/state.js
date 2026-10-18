@@ -7,6 +7,7 @@ export const state = {
     // Status alur
     isSettingStart: false,
     isAnimating: false,
+    isPaused: false,
 
     // Layer & Marker Leaflet
     startMarker: null,

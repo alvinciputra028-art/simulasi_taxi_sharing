@@ -5,10 +5,10 @@
  */
 
 import { state } from './state.js';
-import { map } from './map.js';
+import { map, clearRoute, clearVehicleLayers } from './map.js';
 import { icons, supadioLatLng, maxPassengersCount, simulationMultiplier } from './config.js';
 import { dom, updateStatus, updateTampilanEstimasi, updatePassengerCountDisplay, tampilkanPesanan, sembunyikanPesanan, updateAcceptedOrders } from './ui.js';
-import { resetStatusPenumpang, updatePassengersRouteDist } from './passenger.js';
+import { bersihkanPenumpang, resetStatusPenumpang, updatePassengersRouteDist } from './passenger.js';
 import { dapatkanRuteOSRM } from './routing.js';
 
 /**
@@ -17,11 +17,21 @@ import { dapatkanRuteOSRM } from './routing.js';
 export function mulaiSimulasi() {
     if (!state.routeGeoJSON || state.isAnimating) return;
 
-    state.currentTravelDistance = 0;
+    const melanjutkan = state.isPaused;
+    if (!melanjutkan) {
+        state.currentTravelDistance = 0;
+        state.lastTimestamp = null;
+        resetStatusPenumpang();
+    }
+
     state.isAnimating = true;
+    state.isPaused = false;
 
     // Kunci tombol pengaturan saat simulasi berjalan
     dom.btnPlay.disabled = true;
+    dom.btnPlay.innerText = "▶ Mulai Perjalanan";
+    dom.btnPause.disabled = false;
+    dom.btnReset.disabled = false;
     dom.btnSetStart.disabled = true;
     dom.btnGenerate.disabled = true;
     dom.inputPassCount.disabled = true;
@@ -50,17 +60,65 @@ export function mulaiSimulasi() {
         state.taxiRadiusCircle.setLatLng(startLatLng);
     }
 
-    resetStatusPenumpang();
-
     // Inisialisasi jejak perjalanan yang sudah dilalui (breadcrumb trail)
-    if (state.traveledPolyline) {
+    if (!melanjutkan && state.traveledPolyline) {
         map.removeLayer(state.traveledPolyline);
         state.traveledPolyline = null;
     }
-    state.traveledCoords = [startLatLng];
+    if (!melanjutkan) {
+        state.traveledCoords = [startLatLng];
+    }
 
-    state.lastTimestamp = null;
     state.animationFrameId = requestAnimationFrame(animasiPerjalanan);
+}
+
+export function jedaSimulasi() {
+    if (!state.isAnimating) return;
+
+    state.isAnimating = false;
+    state.isPaused = true;
+    if (state.animationFrameId) {
+        cancelAnimationFrame(state.animationFrameId);
+        state.animationFrameId = null;
+    }
+
+    dom.btnPlay.disabled = false;
+    dom.btnPlay.innerText = "▶ Lanjutkan";
+    dom.btnPause.disabled = true;
+    updateStatus("Simulasi dijeda.");
+}
+
+export function resetSimulasi() {
+    if (state.animationFrameId) {
+        cancelAnimationFrame(state.animationFrameId);
+    }
+
+    state.isAnimating = false;
+    state.isPaused = false;
+    state.animationFrameId = null;
+    state.isSettingStart = false;
+    state.currentTravelDistance = 0;
+    state.lastTimestamp = 0;
+    state.currentPassengersCount = parseInt(dom.inputPassCount.value, 10) || 1;
+    state.unvisitedPickups = [];
+
+    sembunyikanPesanan();
+    bersihkanPenumpang();
+    clearVehicleLayers();
+    clearRoute();
+
+    dom.btnSetStart.disabled = false;
+    dom.btnGenerate.disabled = true;
+    dom.btnPlay.disabled = true;
+    dom.btnPlay.innerText = "▶ Mulai Perjalanan";
+    dom.btnPause.disabled = true;
+    dom.btnReset.disabled = true;
+    dom.inputPassCount.disabled = false;
+    updatePassengerCountDisplay();
+    updateAcceptedOrders();
+    updateStatus("Menunggu Titik A");
+    dom.infoDist.innerText = "-";
+    dom.infoEta.innerText = "-";
 }
 
 /**
@@ -131,6 +189,9 @@ export function animasiPerjalanan(timestamp) {
         updateStatus("Tiba di Bandara Supadio.");
         dom.btnSetStart.disabled = false;
         dom.btnPlay.disabled = false;
+        dom.btnPlay.innerText = "▶ Mulai Ulang";
+        dom.btnPause.disabled = true;
+        dom.btnReset.disabled = false;
         dom.btnGenerate.disabled = false;
         dom.inputPassCount.disabled = false;
     }
@@ -229,6 +290,7 @@ export async function terimaPesanan() {
 
     // Jeda simulasi sementara dengan pesan status yang jelas
     state.isAnimating = false;
+    state.isPaused = false;
     if (state.animationFrameId) {
         cancelAnimationFrame(state.animationFrameId);
         state.animationFrameId = null;
@@ -266,12 +328,14 @@ export async function terimaPesanan() {
         state.currentTravelDistance = 0;
         state.lastTimestamp = null;
         state.isAnimating = true;
+        state.isPaused = false;
         state.animationFrameId = requestAnimationFrame(animasiPerjalanan);
     } else {
         updateStatus("Gagal menghitung rute memutar. Melanjutkan perjalanan awal...");
         sembunyikanPesanan();
         state.lastTimestamp = null;
         state.isAnimating = true;
+        state.isPaused = false;
         state.animationFrameId = requestAnimationFrame(animasiPerjalanan);
     }
 

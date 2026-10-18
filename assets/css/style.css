@@ -111,6 +111,30 @@ button {
     cursor: not-allowed;
 }
 
+.btn-secondary {
+    background-color: #7f8c8d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background-color: #616a6b;
+}
+
+.btn-secondary:disabled,
+.btn-danger:disabled {
+    background-color: #bdc3c7;
+    cursor: not-allowed;
+}
+
+.simulation-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.simulation-actions button {
+    flex: 1;
+}
+
 .btn-warning {
     background-color: #f1c40f;
     color: #2c3e50;

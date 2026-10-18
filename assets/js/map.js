@@ -48,3 +48,12 @@ export function clearVehicleLayers() {
     }
     state.traveledCoords = [];
 }
+
+export function clearRoute() {
+    if (state.routePolyline) {
+        map.removeLayer(state.routePolyline);
+        state.routePolyline = null;
+    }
+    state.routeGeoJSON = null;
+    state.totalRouteDistance = 0;
+}

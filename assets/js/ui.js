@@ -10,6 +10,8 @@ export const dom = {
     btnSetStart: document.getElementById('btn-set-start'),
     btnGenerate: document.getElementById('btn-generate'),
     btnPlay: document.getElementById('btn-play'),
+    btnPause: document.getElementById('btn-pause'),
+    btnReset: document.getElementById('btn-reset'),
     inputSpeed: document.getElementById('input-speed'),
     inputRadius: document.getElementById('input-radius'),
     inputPassCount: document.getElementById('input-pass-count'),
