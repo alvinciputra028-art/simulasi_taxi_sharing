@@ -22,7 +22,9 @@ export const dom = {
     reqCount: document.getElementById('req-count'),
     reqLoc: document.getElementById('req-loc'),
     btnAccept: document.getElementById('btn-accept'),
-    btnReject: document.getElementById('btn-reject')
+    btnReject: document.getElementById('btn-reject'),
+    acceptedOrdersPanel: document.getElementById('accepted-orders-panel'),
+    acceptedOrdersList: document.getElementById('accepted-orders-list')
 };
 
 /**
@@ -75,4 +77,18 @@ export function tampilkanPesanan(penumpang) {
 export function sembunyikanPesanan() {
     state.activeRequestPassenger = null;
     dom.requestPanel.classList.add('hidden');
+}
+
+export function updateAcceptedOrders() {
+    const acceptedPassengers = state.passengers.filter(
+        passenger => passenger.state === 'ACCEPTED' || passenger.state === 'ONBOARD'
+    );
+
+    dom.acceptedOrdersList.innerHTML = acceptedPassengers.map(passenger => `
+        <div class="accepted-order">
+            <b>${passenger.name}</b>
+            <span>${passenger.partySize} orang</span>
+            <small>${passenger.loc}</small>
+        </div>
+    `).join('');
 }

@@ -7,7 +7,7 @@
 import { state } from './state.js';
 import { map } from './map.js';
 import { icons, supadioLatLng, maxPassengersCount, simulationMultiplier } from './config.js';
-import { dom, updateStatus, updateTampilanEstimasi, updatePassengerCountDisplay, tampilkanPesanan, sembunyikanPesanan } from './ui.js';
+import { dom, updateStatus, updateTampilanEstimasi, updatePassengerCountDisplay, tampilkanPesanan, sembunyikanPesanan, updateAcceptedOrders } from './ui.js';
 import { resetStatusPenumpang, updatePassengersRouteDist } from './passenger.js';
 import { dapatkanRuteOSRM } from './routing.js';
 
@@ -235,6 +235,8 @@ export async function terimaPesanan() {
     }
 
     passenger.state = 'ACCEPTED';
+    updateAcceptedOrders();
+
     passenger.marker.setIcon(icons.purple);
     updateStatus(`🔄 Menghitung rute memutar ke ${passenger.name}...`);
 
