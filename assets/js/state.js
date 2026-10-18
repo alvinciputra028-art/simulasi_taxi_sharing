@@ -19,6 +19,7 @@ export const state = {
 
     // Rute & Jarak
     routeGeoJSON: null,
+    initialRouteGeoJSON: null,
     totalRouteDistance: 0,
     currentTravelDistance: 0,
     animationFrameId: null,

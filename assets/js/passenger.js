@@ -108,10 +108,11 @@ export function updateRadiusPenumpang(currentRadius) {
  */
 export function resetStatusPenumpang() {
     state.passengers.forEach(p => {
-        if (p.state === 'PASSED' || p.state === 'IN_RADIUS') {
+        if (p.state !== 'OUT_OF_REACH') {
             p.state = 'WAITING';
             p.marker.setIcon(icons.blue);
             p.hasRequested = false;
+            p.marker.setOpacity(1);
         }
     });
 }

@@ -55,5 +55,6 @@ export function clearRoute() {
         state.routePolyline = null;
     }
     state.routeGeoJSON = null;
+    state.initialRouteGeoJSON = null;
     state.totalRouteDistance = 0;
 }

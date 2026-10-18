@@ -9,7 +9,7 @@ import { map, clearRoute, clearVehicleLayers } from './map.js';
 import { icons, supadioLatLng, maxPassengersCount, simulationMultiplier } from './config.js';
 import { dom, updateStatus, updateTampilanEstimasi, updatePassengerCountDisplay, tampilkanPesanan, sembunyikanPesanan, updateAcceptedOrders } from './ui.js';
 import { bersihkanPenumpang, resetStatusPenumpang, updatePassengersRouteDist } from './passenger.js';
-import { dapatkanRuteOSRM } from './routing.js';
+import { dapatkanRuteOSRM, pulihkanRuteAwal } from './routing.js';
 
 /**
  * Memulai animasi simulasi perjalanan taxi dari titik asal ke bandara.
@@ -18,6 +18,17 @@ export function mulaiSimulasi() {
     if (!state.routeGeoJSON || state.isAnimating) return;
 
     const melanjutkan = state.isPaused;
+    const mulaiUlang = !melanjutkan && state.currentTravelDistance >= state.totalRouteDistance;
+    if (mulaiUlang) {
+        pulihkanRuteAwal();
+        updatePassengersRouteDist();
+        state.currentPassengersCount = parseInt(dom.inputPassCount.value, 10) || 1;
+        state.unvisitedPickups = [];
+        sembunyikanPesanan();
+        updatePassengerCountDisplay();
+        updateAcceptedOrders();
+    }
+
     if (!melanjutkan) {
         state.currentTravelDistance = 0;
         state.lastTimestamp = null;
@@ -55,7 +66,7 @@ export function mulaiSimulasi() {
             weight: 2,
             dashArray: '5, 5'
         }).addTo(map);
-    } else {
+    } else if (!melanjutkan) {
         state.taxiMarker.setLatLng(startLatLng);
         state.taxiRadiusCircle.setLatLng(startLatLng);
     }
@@ -77,6 +88,7 @@ export function jedaSimulasi() {
 
     state.isAnimating = false;
     state.isPaused = true;
+    state.lastTimestamp = null;
     if (state.animationFrameId) {
         cancelAnimationFrame(state.animationFrameId);
         state.animationFrameId = null;
