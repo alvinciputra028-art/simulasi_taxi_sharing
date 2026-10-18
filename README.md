@@ -110,3 +110,7 @@ Karena proyek ini menggunakan fitur standar **ES6 Modules**, file web harus dija
 5. **Respon Pesanan Masuk:**
    - Jika ada penumpang yang cocok dan berada di depan mobil dalam radius, notifikasi pop-up akan muncul.
    - Pilih **Terima** untuk melakukan penjemputan (*detour* rute baru tanpa menghilangkan jejak Titik A) atau **Tolak** untuk terus melanjutkan perjalanan.
+6. **Kontrol Simulasi:**
+   - Klik **Jeda** untuk menghentikan sementara animasi tanpa mengubah posisi taxi atau progres perjalanan.
+   - Klik **Lanjutkan** pada tombol mulai untuk meneruskan simulasi dari posisi terakhir.
+   - Klik **Stop/Reset** untuk menghentikan simulasi dan membersihkan rute, marker, serta penumpang sehingga simulasi baru dapat dimulai tanpa me-refresh halaman.
