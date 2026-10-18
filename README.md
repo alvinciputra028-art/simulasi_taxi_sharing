@@ -15,7 +15,8 @@ Aplikasi simulasi spasial berbasis web (**WebGIS**) yang memodelkan skenario lay
    - Menghitung jarak rute dan estimasi waktu tempuh secara otomatis berdasarkan kecepatan kendaraan.
 
 3. **Generator Penumpang Spasial & Proyeksi Rute (Turf.js):**
-   - Menyebarkan 50 titik calon penumpang acak yang difokuskan pada koridor di sepanjang garis rute perjalanan.
+   - Menyebarkan 50 titik calon penumpang dengan offset acak di sekitar rute, lalu me-*snap* setiap titik ke jalan terdekat menggunakan OSRM.
+   - Mengambil nama jalan dunia nyata untuk setiap titik melalui reverse geocoding OpenStreetMap, sehingga informasi lokasi dapat menampilkan nama seperti Jl. Ahmad Yani atau Jl. Veteran.
    - Mengkalkulasi jarak kumulatif proyeksi setiap penumpang terhadap garis rute (`routeDist`) menggunakan `turf.nearestPointOnLine`.
    - Memberikan identitas tiruan (nama, nama jalan, dan jumlah rombongan 1–3 orang).
    - Klasifikasi status visual penumpang:

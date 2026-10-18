@@ -97,10 +97,20 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // 4. Tombol: Sebar Penumpang Acak
-    dom.btnGenerate.addEventListener('click', () => {
+    dom.btnGenerate.addEventListener('click', async () => {
         const radius = parseFloat(dom.inputRadius.value) || 1500;
-        generatePenumpang(radius);
-        updateStatus("50 Penumpang disebar (Fokus sekitar jalur).");
+        dom.btnGenerate.disabled = true;
+        updateStatus("Mencari jalan dan nama jalan penumpang...");
+        try {
+            const passengerCount = await generatePenumpang(radius);
+            updateStatus(`${passengerCount} penumpang disebar pada jalan nyata.`);
+        } catch (error) {
+            console.error("Passenger generation error:", error);
+            updateStatus("Gagal mencari jalan penumpang.");
+            alert("Gagal mencari data jalan. Coba lagi.");
+        } finally {
+            dom.btnGenerate.disabled = false;
+        }
     });
 
     // 5. Input: Perubahan Radius Dinamis

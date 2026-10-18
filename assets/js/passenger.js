@@ -5,7 +5,7 @@
 
 import { state } from './state.js';
 import { map } from './map.js';
-import { mockNames, mockStreets, icons } from './config.js';
+import { mockNames, icons } from './config.js';
 import { sembunyikanPesanan } from './ui.js';
 
 /**
@@ -24,51 +24,105 @@ export function bersihkanPenumpang() {
  * @param {number} radiusAmbang - Ambang batas radius jangkauan (meter)
  */
 export function generatePenumpang(radiusAmbang = 1500) {
+    return generatePenumpangFromRoads(radiusAmbang);
+}
+
+async function snapToRoad(point) {
+    const [lng, lat] = point.geometry.coordinates;
+    const response = await fetch(
+        `https://router.project-osrm.org/nearest/v1/driving/${lng},${lat}?number=1`
+    );
+    if (!response.ok) {
+        throw new Error(`OSRM nearest gagal (${response.status})`);
+    }
+
+    const data = await response.json();
+    if (data.code !== 'Ok' || !data.waypoints?.length) {
+        throw new Error('OSRM nearest tidak menemukan jalan');
+    }
+
+    const waypoint = data.waypoints[0];
+    return {
+        point: turf.point(waypoint.location),
+        roadName: waypoint.name?.trim() || null
+    };
+}
+
+async function reverseGeocodeRoad(point) {
+    const [lng, lat] = point.geometry.coordinates;
+    const query = new URLSearchParams({
+        format: 'jsonv2',
+        lat: lat.toString(),
+        lon: lng.toString(),
+        zoom: '18',
+        addressdetails: '1'
+    });
+    const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?${query.toString()}`,
+        { headers: { 'Accept-Language': 'id' } }
+    );
+    if (!response.ok) {
+        throw new Error(`Reverse geocoding gagal (${response.status})`);
+    }
+
+    const data = await response.json();
+    const road = data.address?.road || data.address?.pedestrian || data.address?.residential;
+    if (!road) {
+        throw new Error('Nama jalan tidak tersedia untuk titik tersebut');
+    }
+    return road;
+}
+
+async function createPassenger(radiusAmbang, routeLength, id) {
+    const randDistAlongRoute = Math.random() * routeLength;
+    const ptOnRoute = turf.along(state.routeGeoJSON, randDistAlongRoute, { units: 'meters' });
+    const randomOffsetDist = 20 + (Math.random() * 2980);
+    const randomBearing = Math.random() * 360;
+    const candidate = turf.destination(ptOnRoute, randomOffsetDist, randomBearing, { units: 'meters' });
+    const snapped = await snapToRoad(candidate);
+    const roadName = snapped.roadName || await reverseGeocodeRoad(snapped.point);
+    const [randLng, randLat] = snapped.point.geometry.coordinates;
+    const routePoint = turf.nearestPointOnLine(state.routeGeoJSON, snapped.point, { units: 'meters' });
+    const routeDist = routePoint.properties.location || 0;
+    const distToRoute = turf.pointToLineDistance(snapped.point, state.routeGeoJSON, { units: 'meters' });
+    const statusAwal = distToRoute <= radiusAmbang ? 'WAITING' : 'OUT_OF_REACH';
+    const iconAwal = statusAwal === 'WAITING' ? icons.blue : icons.red;
+    const randName = mockNames[Math.floor(Math.random() * mockNames.length)];
+    const randParty = Math.floor(Math.random() * 3) + 1;
+    const marker = L.marker([randLat, randLng], { icon: iconAwal }).addTo(map);
+    marker.bindPopup(`<b>${randName} (${randParty} Orang)</b><br>${roadName}`);
+
+    return {
+        id,
+        name: randName,
+        loc: roadName,
+        partySize: randParty,
+        marker,
+        coords: [randLng, randLat],
+        routeDist,
+        state: statusAwal,
+        hasRequested: false
+    };
+}
+
+async function generatePenumpangFromRoads(radiusAmbang) {
     bersihkanPenumpang();
     if (!state.routeGeoJSON) return;
 
     const routeLength = turf.length(state.routeGeoJSON, { units: 'meters' });
+    const results = await Promise.allSettled(
+        Array.from({ length: 50 }, (_, id) => createPassenger(radiusAmbang, routeLength, id))
+    );
 
-    for (let i = 0; i < 50; i++) {
-        // 1. Ambil titik acak di sepanjang garis rute perjalanan
-        const randDistAlongRoute = Math.random() * routeLength;
-        const ptOnRoute = turf.along(state.routeGeoJSON, randDistAlongRoute, { units: 'meters' });
+    results.forEach(result => {
+        if (result.status === 'fulfilled') {
+            state.passengers.push(result.value);
+        } else {
+            console.error('Passenger road lookup error:', result.reason);
+        }
+    });
 
-        // 2. Beri simpangan acak menjauhi rute (antara 50m hingga 3000m)
-        const randomOffsetDist = 50 + (Math.random() * 2950);
-        const randomBearing = Math.random() * 360;
-        const finalPt = turf.destination(ptOnRoute, randomOffsetDist, randomBearing, { units: 'meters' });
-
-        const randLng = finalPt.geometry.coordinates[0];
-        const randLat = finalPt.geometry.coordinates[1];
-
-        // 3. Evaluasi apakah penumpang berada dalam radius rute
-        const distToRoute = turf.pointToLineDistance(finalPt, state.routeGeoJSON, { units: 'meters' });
-        const snapped = turf.nearestPointOnLine(state.routeGeoJSON, finalPt, { units: 'meters' });
-        const routeDist = snapped.properties.location || 0; // Jarak posisi titik sepanjang rute (meter)
-
-        const statusAwal = distToRoute <= radiusAmbang ? 'WAITING' : 'OUT_OF_REACH';
-        const iconAwal = statusAwal === 'WAITING' ? icons.blue : icons.red;
-
-        const randName = mockNames[Math.floor(Math.random() * mockNames.length)];
-        const randLoc = mockStreets[Math.floor(Math.random() * mockStreets.length)];
-        const randParty = Math.floor(Math.random() * 3) + 1; // 1 - 3 orang
-
-        const marker = L.marker([randLat, randLng], { icon: iconAwal }).addTo(map);
-        marker.bindPopup(`<b>${randName} (${randParty} Orang)</b><br>${randLoc}`);
-
-        state.passengers.push({
-            id: i,
-            name: randName,
-            loc: randLoc,
-            partySize: randParty,
-            marker: marker,
-            coords: [randLng, randLat],
-            routeDist: routeDist,
-            state: statusAwal,
-            hasRequested: false
-        });
-    }
+    return state.passengers.length;
 }
 
 /**
